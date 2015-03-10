@@ -33,7 +33,13 @@ An __Instance__ object specifies relevant details of an LDAP instance.
 For example:
 
 ```
-{"name":"testuser20000","user":"testuser","port":"20000","base_dn":"o=example.com","password":"MWQ3MjY5NzUyNGU"}}
+{
+  "name":"testuser20000",
+  "user":"testuser",
+  "port":"20000",
+  "base_dn":"o=example.com",
+  "password":"MWQ3MjY5NzUyNGU"
+}
 ```
 
 #### Schema
@@ -51,7 +57,10 @@ If an error occurs in any of the following API calls, an __Error__ object will b
 For example:
 
 ```
-{"error":"Invalid user", "code":403}
+{
+  "error":"Invalid user", "
+  code":403
+}
 ```
 
 ## API Usage
