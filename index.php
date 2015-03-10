@@ -267,7 +267,7 @@ INF;
         if ($res !== 0)
             throw new RuntimeException("Could not remove instance", 500, new Exception(implode("\n",$output)));
         
-        return (object)array('status'=>'success');
+        return (object)array('success'=>true);
     }
     
     protected function readMany($filter = '') {
