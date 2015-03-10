@@ -1,0 +1,15 @@
+# Authentication
+AuthType Basic
+AuthName "LDAPaaS Access"
+AuthBasicProvider file
+AuthUserFile /var/www/html/ldapaas/.htpasswd
+Require valid-user
+
+# Block the config and auth files from view
+<Files  ~ "(^\.ht|\.ini$)">
+  Order allow,deny
+  Deny from all
+</Files>
+
+RewriteEngine on
+RewriteRule ^.*$ index.php [NC,L]

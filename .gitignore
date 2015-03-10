@@ -1,0 +1,17 @@
+###################
+## Project-specific
+###################
+config.ini
+.htpasswd
+
+
+############
+## Windows
+############
+
+# Windows image file caches
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
