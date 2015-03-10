@@ -58,8 +58,8 @@ For example:
 
 ```
 {
-  "error":"Invalid user", "
-  code":403
+  "error":"Invalid user",
+  "code":403
 }
 ```
 
