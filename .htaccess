@@ -1,3 +1,8 @@
+# Don't accept insecure connections - basic authentication is not safe unless over https
+RewriteEngine on
+RewriteCond %{HTTPS} !=on
+RewriteRule . - [F,NC]
+
 # Authentication
 AuthType Basic
 AuthName "LDAPaaS Access"
@@ -11,5 +16,6 @@ Require valid-user
   Deny from all
 </Files>
 
+# Feed every request to index.php
 RewriteEngine on
 RewriteRule ^.*$ index.php [NC,L]
