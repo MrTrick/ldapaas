@@ -65,9 +65,11 @@ For example:
 
 ## API Usage
 
-The API is intentionally very simple. Once an LDAP instance is started, most changes can be made through LDAP.
+The API is intentionally very simple.  
+Once an LDAP instance is started, most changes can be made through LDAP.
 
-LDAP instances are created and started, or stopped and deleted. There is no provision for a managing inactive LDAP instances. 
+LDAP instances are created and started, or stopped and deleted.  
+There is no provision for a managing inactive LDAP instances. 
 
 ### PUT /
 
@@ -80,7 +82,7 @@ Create and start an LDAP instance.
 #### Response
 Returns the __Instance__ object for the newly created LDAP instance.
 
-### GET /<NAME>
+### GET /(NAME)
 
 #### Parameters
   - name (eg testuser20000)
@@ -91,7 +93,7 @@ Read information about that LDAP instance.
 #### Response
 Returns that __Instance__ object.
 
-### DELETE /<NAME>
+### DELETE /(NAME)
 
 #### Parameters
   - name (eg testuser20000)
