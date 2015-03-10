@@ -65,6 +65,7 @@ class LDAPaaS {
         if (!$user or !preg_match("/^\\w+$/", $user)) throw new InvalidArgumentException("Invalid user", 403);
         $request->setParam('user', $user);
         
+        //Allow the method determination to be overridden by a 'method' parameter
         $method = $request->getParam('method', $request->getMethod());
         
         //Find a route handler for the method and path
