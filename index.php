@@ -305,18 +305,18 @@ INF;
 }  
 //-----------------------------------------------------------------------------
 
-
-chdir(__DIR__);
-$ldapaas = new LDAPaaS();
-
+//Set up request/response objects
 require_once('Zend/Controller/Request/Http.php');
 require_once('Zend/Controller/Response/Http.php');
 $request = new Zend_Controller_Request_Http();
 $response = new Zend_Controller_Response_Http();
 $response->setHeader('Content-Type', 'application/json');
 
-//Route the incoming request, and send back a response 
+//Route the incoming request, and send back the response 
 try {
+    chdir(__DIR__);
+    $ldapaas = new LDAPaaS();
+    
     $output = $ldapaas->route($request);
     $response->setBody(json_encode($output));
     $response->sendResponse();
@@ -328,7 +328,7 @@ catch(Exception $e) {
     $code = ($code >= 400 && $code <= 599) ? $code : 500; 
     
     //Log it
-    $log = $ldapaas->getLog();
+    $log = isset($ldapaas) && $ldapaas->getLog();
     if ($log) $log->err($e);
     else error_log( (string)$e );
     
