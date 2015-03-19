@@ -93,7 +93,8 @@ class LDAPaaS {
     protected function routeCreate(Zend_Controller_Request_Http $request) {
         $user = $request->getParam('user');         //Authenticated user
         $port = $this->getNextPort();               //Next available port
-        $host = gethostname();                      //The LDAP server, which due to proxies etc may be different to the HTTP server
+        $host = $this->config->ldap->host ? $this->config->ldap->host : gethostname();                      
+                                                    //The LDAP server, which due to proxies etc may be different to the HTTP server
         $name = $user.$port;                        //Create name as userPORT
         $base_dn = $request->get('base_dn');        //Using the given base_dn
         

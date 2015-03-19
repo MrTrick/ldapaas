@@ -24,6 +24,29 @@ Values marked __REQUIRED__ must be specified by `config.ini`. See `defaults.ini`
 4. Create a folder for the LDAP instances, and ensure that the web server user has write access to it.
 5. Create a `config.ini` file, and specify the needed values. 
 
+## Post-install Testing
+
+Depending where the service is installed, you should be able to create an instance.
+
+Run `curl -X PUT http://(USER):(PASS)@(SERVER)/ldapaas?base_dn=o%3Dexample.com` and you should get a response like
+`{"name":"testuser20000","user":"testuser","host":"ldap.example.com","port":"20000","base_dn":"o=example.com","password":"MWQ3MjY5NzUyNGU"}`
+
+* If the response is an Apache 500 error, check the apache logs, and consider increasing the `LogLevel` to assist debugging.
+* If the response is an Apache 401 error, ensure you have set up the password file correctly. 
+* If the response is a PHP fatal error, you may need to upgrade to at least PHP 5.3 and install any missing modules.
+* If the response is an Error object (see below), heed the message and, view the application log for more information. 
+
+Once the LDAP instance has been created, you should be able to connect to it.
+
+_(Using the response information above)_  
+Run `ldapsearch -h ldap.example.com -p 20000 -x -D "cn=Directory Manager" -w MWQ3MjY5NzUyNGU` and you should see an LDIF response.
+
+* If you can run this command from the LDAP server but not on another, you will need to add a firewall rule.   
+  Something like `iptables -A INPUT -p tcp --match multiport --dports 20000:21000 -j ACCEPT`.  
+  _(Some iptables rulesets have a default drop at the end, so you will need to use -I instead)_
+
+* If you cannot connect from the LDAP server, check that the instance is still running. Check `netstat -nlt`
+
 ## API Data Types
 
 ### Instance
