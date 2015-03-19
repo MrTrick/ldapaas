@@ -1,5 +1,10 @@
 <?php
 if (!function_exists('error_get_last_message')) { function error_get_last_message() { $error = error_get_last(); return $error['message']; }}
+if (!function_exists('is_dn')) { function is_dn($dn) {
+    if (!is_string($dn) || (false==($parts = preg_split('/(?<!\\\\),/', $dn)))) return false;
+    foreach($parts as $part) if (!preg_match('#^\w+=([^,+"\\\\<>;=/]|\\\\[,+"\\\\<>;=/])+$#',$part)) return false;
+    return true;
+}}
 
 /**
  * LDAPaaS - LDAP as a Service
@@ -86,12 +91,13 @@ class LDAPaaS {
     }
     
     protected function routeCreate(Zend_Controller_Request_Http $request) {
-        $user = $request->getParam('user');     //Authenticated user
-        $port = $this->getNextPort();        //Next available port
-        $name = $user.$port;                 //Create name as userPORT
-        $base_dn = $request->get('base_dn'); //Using the specified base_dn
+        $user = $request->getParam('user');         //Authenticated user
+        $port = $this->getNextPort();               //Next available port
+        $host = gethostname();                      //The LDAP server, which due to proxies etc may be different to the HTTP server
+        $name = $user.$port;                        //Create name as userPORT
+        $base_dn = $request->get('base_dn');        //Using the given base_dn
         
-        return $this->create($name, $user, $port, $base_dn);
+        return $this->create($name, $user, $host, $port, $base_dn);
     }
     
     protected function routeRead(Zend_Controller_Request_Http $request) {
@@ -157,22 +163,23 @@ class LDAPaaS {
      * Create an LDAP instance
      * @param string $name Instance name
      * @param string $user
+     * @param string $host
      * @param int $port
      * @param string $base_dn
      * @throws InvalidArgumentException If any parameters are invalid
      * @throws RuntimeException If creating the instance fails
      * @return StdClass The instance details
      */
-    protected function create($name, $user, $port, $base_dn) {
+    protected function create($name, $user, $host, $port, $base_dn) {
         //Validate inputs
         if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
         if (!$user or !preg_match("/^\\w+$/", $user)) throw new InvalidArgumentException("Invalid user", 403);
+        if (!$host) throw new InvalidArgumentException("Invalid host", 403);
         if (!$port or !is_numeric($port)) throw new InvalidArgumentException("Invalid port", 403);
-        if (!$base_dn or ldap_dn2ufn($base_dn) === false) throw new InvalidArgumentException("Invalid base_dn parameter", 403);
+        if (!$base_dn or !is_dn($base_dn)) throw new InvalidArgumentException("Invalid base_dn parameter", 403);
         
         //Get / generate other details
         $path = $this->path.'/'.$name;
-        $server = $_SERVER['SERVER_NAME'];
         $password = substr(base64_encode(md5(microtime())),0,15);
         
         //Create a directory for that instance
@@ -182,7 +189,7 @@ class LDAPaaS {
         //Create an install file for that instance
         $inf = <<<INF
 [General]
-FullMachineName=$server
+FullMachineName=$host
 ServerRoot=$path
 ConfigDirectoryAdminID=admin
 ConfigDirectoryAdminPwd=$password
@@ -209,7 +216,7 @@ INF;
             throw new RuntimeException("Could not create install file for '$name'", 500, new Exception(error_get_last_message()));
         
         //Store the instance details
-        $details = (object)compact('name','user','port','base_dn','password');
+        $details = (object)compact('name','user','host','port','base_dn','password');
         if (!@file_put_contents($path.'/details.json', json_encode($details))) 
             throw new RuntimeException("Could not store details for '$name'", 500, new Exception(error_get_last_message()));
         
