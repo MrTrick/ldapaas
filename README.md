@@ -36,6 +36,7 @@ For example:
 {
   "name":"testuser20000",
   "user":"testuser",
+  "host":"ldap.example.com",
   "port":"20000",
   "base_dn":"o=example.com",
   "password":"MWQ3MjY5NzUyNGU"
@@ -46,6 +47,7 @@ For example:
  
  - name: 'Name' of the instance. Used to identify the LDAP instance when reading or removing it.
  - user: The API user that created the instance.
+ - host: The LDAP server hosting the instance. 
  - port: Port number the LDAP instance listens on.
  - base_dn: The base DN specified when creating the instance.
  - password: A randomly generated password, used for the admin and `cn=Directory Manager` accounts.
