@@ -1,4 +1,6 @@
 <?php
+if (!function_exists('error_get_last_message')) { function error_get_last_message() { $error = error_get_last(); return $error['message']; }}
+
 /**
  * LDAPaaS - LDAP as a Service
  * 
@@ -175,7 +177,7 @@ class LDAPaaS {
         
         //Create a directory for that instance
         if (file_exists($path)) throw new RuntimeException("Folder for '$name' already exists", 500);
-        else if (!@mkdir($path)) throw new RuntimeException("Could not create folder for '$name'", 500, new Exception(error_get_last()['message']));
+        else if (!@mkdir($path)) throw new RuntimeException("Could not create folder for '$name'", 500, new Exception(error_get_last_message()));
         
         //Create an install file for that instance
         $inf = <<<INF
@@ -204,12 +206,12 @@ ldif_dir=$path/ldif
 bak_dir=$path/bak
 INF;
         if (!@file_put_contents($path.'/install.inf', $inf)) 
-            throw new RuntimeException("Could not create install file for '$name'", 500, new Exception(error_get_last()['message']));
+            throw new RuntimeException("Could not create install file for '$name'", 500, new Exception(error_get_last_message()));
         
         //Store the instance details
         $details = (object)compact('name','user','port','base_dn','password');
         if (!@file_put_contents($path.'/details.json', json_encode($details))) 
-            throw new RuntimeException("Could not store details for '$name'", 500, new Exception(error_get_last()['message']));
+            throw new RuntimeException("Could not store details for '$name'", 500, new Exception(error_get_last_message()));
         
         //Run the installer
         exec("/usr/sbin/setup-ds.pl --file=$path/install.inf --silent --logfile=$path/setup.log 2>&1", $output, $res);
@@ -237,7 +239,7 @@ INF;
         //Read the details
         if (!is_readable($path.'/details.json')) throw new RuntimeException("Could not read '$name'", 500, new Exception("File missing or unreadable"));
         $content = @file_get_contents($path.'/details.json');
-        if (!$content) throw new RuntimeException("Could not read '$name'", 500, new Exception(error_get_last()['message']));
+        if (!$content) throw new RuntimeException("Could not read '$name'", 500, new Exception(error_get_last_message()));
         $details = json_decode($content);
         if ($details === false) throw new RuntimeException("Could not read '$name'", 500, new Exception(json_last_error_msg()));
         
