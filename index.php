@@ -63,7 +63,8 @@ class LDAPaaS {
         'DELETE /'              => 'routeReset',
         'PUT /'                 => 'routeCreate',
         'GET /(?P<name>\w+)'    => 'routeRead',
-        'DELETE /(?P<name>\w+)' => 'routeDelete'
+        'DELETE /(?P<name>\w+)' => 'routeDelete',
+        'POST /(?P<name>\w+)/restart' => 'routeRestart'
     );
     
     public function route(Zend_Controller_Request_Http $request) {        
@@ -129,6 +130,16 @@ class LDAPaaS {
     protected function routeReset(Zend_Controller_Request_Http $request) {
         $user = $request->getParam('user');
         return $this->deleteMany($user);
+    }
+    
+    protected function routeRestart(Zend_Controller_Request_Http $request) {
+        $user = $request->getParam('user');
+        $name = $request->getparam('name');
+        
+        $instance = $this->read($name);
+        if ($user !== $instance->user) throw new InvalidArgumentException("Access to this instance is forbidden", 403);
+        
+        return $this->restart($name);
     }
     
     //------------------------------------------------------------------------------
@@ -277,6 +288,33 @@ INF;
         exec("rm $path -r", $output, $res);
         if ($res !== 0)
             throw new RuntimeException("Could not remove instance", 500, new Exception(implode("\n",$output)));
+        
+        return (object)array('success'=>true);
+    }
+    
+    /**
+     * Restart the instance
+     * @param string $name  Instance name
+     * @throws InvalidArgumentException If the name is invalid
+     * @throws RuntimeException If the instance cannot be restarted
+     */
+    protected function restart($name) {
+        //Validate inputs
+        if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
+        
+        //Find the instance
+        $path = $this->path.'/'.$name;
+        if (!file_exists($path)) throw new RuntimeException("Could not find folder for '$name'", 500);
+        
+        //Stop it
+        exec("setsid /usr/sbin/restart-dirsrv -d $path $name 2>&1", $output, $res);
+        //Result:
+        //  0 - Process has been successfully halted and started again
+        //  1 - Process has been successfully halted, but could not 
+        //  2 - Process was not running, but has successfully been started
+        //  3 - Process could not be stopped
+        if ($res !== 0 and $res !== 2)
+            throw new RuntimeException("Could not restart instance", 500, new Exception(implode("\n",$output)));
         
         return (object)array('success'=>true);
     }
