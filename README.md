@@ -131,6 +131,17 @@ All records and associated files will be removed.
 #### Response
 Returns a `{"success":true}` object.
 
+### POST /(NAME)/restart
+
+#### Parameters
+  - name (eg testuser20000)
+
+#### Description
+Restart that LDAP instance
+
+#### Response
+Returns a `{"success":true}` object.
+
 ### GET /
 
 #### Parameters
