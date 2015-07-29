@@ -142,6 +142,17 @@ Restart that LDAP instance
 #### Response
 Returns a `{"success":true}` object.
 
+### POST /(NAME)/purge
+
+#### Parameters
+  - name (eg testuser20000)
+
+#### Description
+Purge that LDAP instance - delete the instance, and recreate it usingthe same settings.
+
+#### Response
+Returns the __Instance__ object.
+
 ### GET /
 
 #### Parameters
