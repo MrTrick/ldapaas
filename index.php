@@ -64,7 +64,8 @@ class LDAPaaS {
         'PUT /'                 => 'routeCreate',
         'GET /(?P<name>\w+)'    => 'routeRead',
         'DELETE /(?P<name>\w+)' => 'routeDelete',
-        'POST /(?P<name>\w+)/restart' => 'routeRestart'
+        'POST /(?P<name>\w+)/restart'  => 'routeRestart',
+        'POST /(?P<name>\w+)/purge' => 'routePurge'
     );
     
     public function route(Zend_Controller_Request_Http $request) {        
@@ -142,6 +143,16 @@ class LDAPaaS {
         return $this->restart($name);
     }
     
+    protected function routePurge(Zend_Controller_Request_Http $request) {
+        $user = $request->getParam('user');
+        $name = $request->getParam('name');
+        
+        $instance = $this->read($name);
+        if ($user !== $instance->user) throw new InvalidArgumentException("Access to this instance is forbidden", 403);
+        
+        return $this->purge($name);
+    }
+    
     //------------------------------------------------------------------------------
     // Utility Functions
     //------------------------------------------------------------------------------
@@ -178,11 +189,12 @@ class LDAPaaS {
      * @param string $host
      * @param int $port
      * @param string $base_dn
+     * @param string $admin_password
      * @throws InvalidArgumentException If any parameters are invalid
      * @throws RuntimeException If creating the instance fails
      * @return StdClass The instance details
      */
-    protected function create($name, $user, $host, $port, $base_dn) {
+    protected function create($name, $user, $host, $port, $base_dn, $admin_password=null) {
         //Validate inputs
         if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
         if (!$user or !preg_match("/^\\w+$/", $user)) throw new InvalidArgumentException("Invalid user", 403);
@@ -192,7 +204,7 @@ class LDAPaaS {
         
         //Get / generate other details
         $path = $this->path.'/'.$name;
-        $password = substr(base64_encode(md5(microtime())),0,15);
+        $password = is_null($admin_password) ? substr(base64_encode(md5(microtime())),0,15) : $admin_password;
         
         //Create a directory for that instance
         if (file_exists($path)) throw new RuntimeException("Folder for '$name' already exists", 500);
@@ -317,6 +329,26 @@ INF;
             throw new RuntimeException("Could not restart instance", 500, new Exception(implode("\n",$output)));
         
         return (object)array('success'=>true);
+    }
+    
+    /**
+     * Purge the instance (delete and recreate with the same settings)
+     * @param string $name Instance name
+     * @throws InvalidArgumentException If the name is invalid
+     * @return StdClass Instance details @see create()
+     */
+    protected function purge($name) {
+        //Validate inputs
+        if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
+        
+        //Read the instance configuration
+        $instance = $this->read($name);
+        
+        //Delete the existing instance - throws on failure, continues on success
+        $this->delete($name);
+        
+        //Create a new instance with the original configuration
+        return $this->create($instance->name, $instance->user, $instance->host, $instance->port, $instance->base_dn, $instance->password);
     }
     
     protected function readMany($filter = '') {
