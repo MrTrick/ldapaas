@@ -245,7 +245,7 @@ INF;
             throw new RuntimeException("Could not store details for '$name'", 500, new Exception(error_get_last_message()));
         
         //Run the installer
-        exec("/usr/sbin/setup-ds.pl --file=$path/install.inf --silent --logfile=$path/setup.log 2>&1", $output, $res);
+        exec("setsid /usr/sbin/setup-ds.pl --file=$path/install.inf --silent --logfile=$path/setup.log 2>&1", $output, $res);
         if ($res !== 0)
             throw new RuntimeException("Could not create instance", 500, new Exception(implode("\n",$output)));
         
