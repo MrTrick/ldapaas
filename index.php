@@ -20,6 +20,10 @@ if (!function_exists('is_dn')) { function is_dn($dn) {
  */
 class LDAPaaS {
     const VERSION = '0.0.1';
+
+    const STATUS_RUNNING = "running"; //PID file exists, and corresponding process is running
+    const STATUS_DEAD = "dead";       //PID file exists, but no corresponding process is running
+    const STATUS_STOPPED = "stopped"; //No PID file exists
     
     /** @var Zend_Log */
     protected $log = null;
@@ -249,6 +253,11 @@ INF;
         if ($res !== 0)
             throw new RuntimeException("Could not create instance", 500, new Exception(implode("\n",$output)));
         
+        //Determine service status
+        $status = $this->status($name);
+        if ($status)
+            $details->status = $status;
+        
         return $details;
     } 
     
@@ -274,7 +283,37 @@ INF;
         $details = json_decode($content);
         if ($details === false) throw new RuntimeException("Could not read '$name'", 500, new Exception(json_last_error_msg()));
         
+        //Determine service status
+        $status = $this->status($name);
+        if ($status)
+            $details->status = $status;
+        
         return $details;
+    }
+    
+    protected function status($name) {
+        //Validate inputs
+        if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
+    
+        //Find the instance
+        $path = $this->path.'/'.$name;
+        if (!file_exists($path)) throw new RuntimeException("'$name' not found", 404);
+    
+        //Determine service status
+        $pidfile = "$path/run/slapd-$name.pid";
+        if (file_exists($pidfile)) {
+            $pid = file_get_contents($pidfile);
+            exec("kill -0 $pid", $output, $res);
+            if ($res === 0)
+                $status = self::STATUS_RUNNING;
+            else if ($res === 1)
+                $status = self::STATUS_DEAD;
+        }
+        else {
+            $status = self::STATUS_STOPPED;
+        }
+    
+        return $status;
     }
     
     /**
@@ -287,21 +326,30 @@ INF;
         //Validate inputs
         if (!$name or !preg_match("/^\\w+$/", $name)) throw new InvalidArgumentException("Invalid name '$name'", 403);
         
+        $ret = array();
+        
         //Find the instance
         $path = $this->path.'/'.$name;
         if (!file_exists($path)) throw new RuntimeException("Could not find folder for '$name'", 500);
         
-        //Stop it
-        exec("/usr/sbin/stop-dirsrv -d $path $name 2>&1", $output, $res);
-        if ($res !== 0)
-            throw new RuntimeException("Could not stop instance", 500, new Exception(implode("\n",$output)));
-        
+        $status = $this->status($name);
+        if ($status === self::STATUS_RUNNING) {
+            //Stop it
+            exec("/usr/sbin/stop-dirsrv -d $path $name 2>&1", $output, $res);
+            if ($res !== 0 && $res !== 2) //Server was stopped (0) or was not already running (2)
+                throw new RuntimeException("Could not stop instance", 500, new Exception(implode("\n",$output)));
+        }
+        else {
+            $ret['message'] = "Instance not stopped: status before deletion was '".$status."'";
+        }
         //Remove the instance folder
         exec("rm $path -r", $output, $res);
         if ($res !== 0)
             throw new RuntimeException("Could not remove instance", 500, new Exception(implode("\n",$output)));
         
-        return (object)array('success'=>true);
+        $ret['success'] = true;
+        
+        return (object)$ret;
     }
     
     /**
@@ -345,10 +393,14 @@ INF;
         $instance = $this->read($name);
         
         //Delete the existing instance - throws on failure, continues on success
-        $this->delete($name);
+        $deleteResult = $this->delete($name);
         
         //Create a new instance with the original configuration
-        return $this->create($instance->name, $instance->user, $instance->host, $instance->port, $instance->base_dn, $instance->password);
+        $createResult = $this->create($instance->name, $instance->user, $instance->host, $instance->port, $instance->base_dn, $instance->password);
+        
+        if (!empty($deleteResult->message) && empty($createResult->message)) $createResult->message = $deleteResult->message;
+        
+        return $createResult;
     }
     
     protected function readMany($filter = '') {
